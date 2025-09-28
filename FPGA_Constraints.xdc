@@ -40,4 +40,4 @@ set_property -dict {PACKAGE_PIN V11 IOSTANDARD LVCMOS33} [get_ports {CONTROLLER_
 
 
 # Audio Output
-set_property -dict {PACKAGE_PIN A11 IOSTANDARD LVCMOS33} [get_ports {PWM}]
+set_property -dict {PACKAGE_PIN E6 IOSTANDARD LVCMOS33} [get_ports {PWM}]
