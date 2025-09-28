@@ -77,7 +77,7 @@ module PlayerLogic (
     if (~reset) begin
       if (trigger) begin
 
-        if (sword_visible == 4'b0010) begin
+        if (sword_visible == 4'b0001) begin
           sword_duration <= sword_duration + 1;
         end else begin
           sword_duration <= 0;
@@ -105,7 +105,7 @@ module PlayerLogic (
     if (~reset) begin
 
       // Reset the action_complete flag when buttons are released
-      if (pressed_buttons != 5'b00000) begin
+      if (released_buttons != 5'b00000) begin
         action_complete <= 0;
         direction_stored <= 0;
       end
@@ -138,7 +138,7 @@ module PlayerLogic (
 
         MOVE_STATE: begin
           // Can't move if action is already complete
-          if (~action_complete && trigger) begin
+          if (trigger) begin
             // Move player based on direction inputs and update orientation
             // Check boundary for up movement
             if (input_buffer[0] == 1 && player_pos[3:0] > 4'b0001) begin
@@ -176,73 +176,80 @@ module PlayerLogic (
 
         end
 
+        
         ATTACK_STATE: begin
-          if(~action_complete && input_buffer[4]!=0) begin
-            // Check if the sword direction is specified by the player
-            if(input_buffer[3:0] != 0) begin
-              if (input_buffer[0] == 1) begin
-                last_direction   <= 2'b00;
-                player_direction <= 2'b00;
-                direction_stored <= 1;
-              end
-
-              if (input_buffer[1] == 1) begin
-                last_direction   <= 2'b10;
-                player_direction <= 2'b10;
-                direction_stored <= 1;
-              end
-
-              if (input_buffer[2] == 1) begin
-                last_direction   <= 2'b11;
-                player_direction <= 2'b11;
-                direction_stored <= 1;
-              end
-
-              if (input_buffer[3] == 1) begin
-                last_direction   <= 2'b01;
-                player_direction <= 2'b01;
-                direction_stored <= 1;
-              end
+        
+        
+        if (trigger) begin 
+              if(~action_complete && pressed_buttons[4] !=0) begin
+             
+                    // Check if the sword direction is specified by the player
+                    if(input_buffer[3:0] != 0) begin
+                      if (input_buffer[0] == 1) begin
+                        last_direction   <= 2'b00;
+                        player_direction <= 2'b00;
+                        direction_stored <= 1;
+                      end
+        
+                      if (input_buffer[1] == 1) begin
+                        last_direction   <= 2'b10;
+                        player_direction <= 2'b10;
+                        direction_stored <= 1;
+                      end
+        
+                      if (input_buffer[2] == 1) begin
+                        last_direction   <= 2'b11;
+                        player_direction <= 2'b11;
+                        direction_stored <= 1;
+                      end
+        
+                      if (input_buffer[3] == 1) begin
+                        last_direction   <= 2'b01;
+                        player_direction <= 2'b01;
+                        direction_stored <= 1;
+                      end
+                    end
+                    
+                    // if not, use the last direction
+                    else begin
+                      last_direction <= player_direction;
+                      direction_stored <= 1;
+                    end
+                  end
+                    
+                 if (direction_stored) begin
+                    
+                    // Set sword orientation
+                    sword_orientation <= last_direction;
+                    
+                    // Set sword location
+                    if (last_direction == 2'b00) begin  // player facing up
+                      sword_position <= player_pos - 1;
+                    end
+        
+                    if (last_direction == 2'b10) begin  // player facing down
+                      sword_position <= player_pos + 1;
+                    end
+        
+                    if (last_direction == 2'b11) begin  // player facing left
+                      sword_position <= player_pos - 16;
+                    end
+        
+                    if (last_direction == 2'b01) begin  // player facing right
+                      sword_position <= player_pos + 16;
+                    end
+        
+                    sword_visible <= 4'b0001; // Make sword visible
+                    
+                 end
+        
+                  if (sword_duration >= ATTACK_DURATION) begin // Attack State duration
+                        direction_stored <= 0; // reset direction_stored flag
+                        action_complete <= 1; // Set action complete flag
+                        sword_visible  <= 4'b1111; // Make sword invisible
+                        next_state <= IDLE_STATE;  // Return to IDLE after attacking
+                  end
             end
-            
-            // if not, use the last direction
-            else begin
-              last_direction <= player_direction;
-              direction_stored <= 1;
-            end
-          end
-
-          if (direction_stored) begin
-            // Set sword orientation
-            sword_orientation <= last_direction;
-
-            // Set sword location
-            if (last_direction == 2'b00) begin  // player facing up
-              sword_position <= player_pos - 1;
-            end
-
-            if (last_direction == 2'b10) begin  // player facing down
-              sword_position <= player_pos + 1;
-            end
-
-            if (last_direction == 2'b11) begin  // player facing left
-              sword_position <= player_pos - 16;
-            end
-
-            if (last_direction == 2'b01) begin  // player facing right
-              sword_position <= player_pos + 16;
-            end
-
-            sword_visible <= 4'b0001; // Make sword visible
-            // reset
-            action_complete <= 1; // Set action complete flag
-            direction_stored <= 0; // reset direction_stored flag
-          end
-
-          if (sword_duration >= ATTACK_DURATION) begin // Attack State duration
-            sword_visible  <= 4'b1111; // Make sword invisible
-            next_state <= IDLE_STATE;  // Return to IDLE after attacking
-          end
         end
 
 
