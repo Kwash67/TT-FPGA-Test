@@ -556,6 +556,8 @@ endmodule
  *   - `is_present`: Indicates whether a controller is connected (`1` = connected, `0` = not connected).
  */
 module gamepad_pmod_decoder (
+    input wire clk,
+    input wire rst_n,
     input wire [11:0] data_reg,
     output wire b,
     output wire y,
@@ -587,9 +589,23 @@ module gamepad_pmod_decoder (
   
   // If more than X buttons pressed, output all unpressed (adjust threshold as needed)
   wire too_many_buttons = (button_count > 4'd2);  // More than 2 buttons = suspicious
+    
+  // Store previous valid output
+  reg [11:0] prev_output;
   
-  // Output all zeros if too many buttons, otherwise use actual data
-  wire [11:0] filtered_data = too_many_buttons ? 12'b0 : button_data;
+  always @(posedge clk) begin
+    if (~rst_n) begin
+      prev_output <= 12'b0;
+    end else begin
+      // If data looks good, update previous output
+      if (!too_many_buttons) begin
+        prev_output <= button_data;
+      end
+    end
+  end
+  
+  // Use previous output if current data is suspicious, otherwise use current data
+  wire [11:0] filtered_data = too_many_buttons ? prev_output : button_data;
   
   assign {b, y, select, start, up, down, left, right, a, x, l, r} = filtered_data;
 
@@ -645,6 +661,8 @@ module gamepad_pmod_single (
   );
 
   gamepad_pmod_decoder decoder (
+      .clk(clk),
+      .rst_n(rst_n),
       .data_reg(gamepad_pmod_data),
       .b(b),
       .y(y),
@@ -660,5 +678,6 @@ module gamepad_pmod_single (
       .r(r),
       .is_present(is_present)
   );
+
 
 endmodule
